@@ -1,0 +1,150 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Cartoon Video Maker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #101322;
+      color: white;
+    }
+    header {
+      padding: 22px 16px;
+      text-align: center;
+      background: #1b2040;
+    }
+    header h1 { margin: 0 0 8px; color: #a9a5ff; }
+    main {
+      max-width: 650px;
+      margin: 25px auto;
+      padding: 20px;
+    }
+    .panel {
+      background: #1b2040;
+      padding: 20px;
+      border-radius: 16px;
+    }
+    label {
+      display: block;
+      margin: 16px 0 8px;
+    }
+    textarea, select {
+      width: 100%;
+      padding: 13px;
+      border-radius: 9px;
+      border: 1px solid #505577;
+      background: #101322;
+      color: white;
+      font-size: 16px;
+    }
+    textarea { min-height: 125px; resize: vertical; }
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 10px;
+      background: #7770ff;
+      color: white;
+      font-size: 17px;
+      font-weight: bold;
+    }
+    #result {
+      margin-top: 18px;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+    .note { color: #c5c8df; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎬 AI Cartoon Studio</h1>
+    <div>अपनी कहानी को वीडियो में बदलने की शुरुआत करें</div>
+  </header>
+
+  <main>
+    <div class="panel">
+      <h2>अपना वीडियो बनाएँ</h2>
+      <p class="note">
+        अपनी कहानी लिखें और वीडियो का स्टाइल चुनें।
+      </p>
+
+      <label for="story">आपकी कहानी</label>
+      <textarea id="story"
+        placeholder="उदाहरण: एक बंदर और बिल्ली अच्छे दोस्त थे..."></textarea>
+
+      <label for="style">वीडियो का स्टाइल</label>
+      <select id="style">
+        <option>3D Cartoon</option>
+        <option>Realistic</option>
+        <option>Anime</option>
+        <option>Kids Animation</option>
+      </select>
+
+      <label for="duration">वीडियो की अवधि</label>
+      <select id="duration">
+        <option value="5">5 सेकंड का टेस्ट</option>
+        <option value="10">10 सेकंड</option>
+        <option value="30">30 सेकंड</option>
+      </select>
+
+      <button onclick="makePrompt()">
+        ✨ वीडियो बनाने की तैयारी करें
+      </button>
+
+      <div id="result" aria-live="polite"></div>
+    </div>
+  </main>
+
+  <script>
+    function makePrompt() {
+      const story = document.getElementById("story").value.trim();
+      const style = document.getElementById("style").value;
+      const duration = document.getElementById("duration").value;
+      const result = document.getElementById("result");
+
+      if (!story) {
+        result.textContent = "पहले अपनी कहानी लिखिए।";
+        return;
+      }
+
+      result.replaceChildren();
+
+      const heading = document.createElement("h3");
+      heading.textContent = "आपका वीडियो प्रॉम्प्ट तैयार है!";
+      result.appendChild(heading);
+
+      const prompt = document.createElement("p");
+      prompt.textContent =
+        "Create a " + style + " video, duration " + duration +
+        " seconds. Story: " + story +
+        ". Use clear animation, consistent characters and smooth motion.";
+      result.appendChild(prompt);
+
+      const copy = document.createElement("button");
+      copy.textContent = "📋 प्रॉम्प्ट कॉपी करें";
+      copy.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(prompt.textContent);
+          copy.textContent = "कॉपी हो गया!";
+        } catch {
+          result.append(" टेक्स्ट को दबाकर चुनें और Copy करें।");
+        }
+      };
+      result.appendChild(copy);
+
+      const note = document.createElement("p");
+      note.className = "note";
+      note.textContent =
+        "यह शुरुआती डेमो प्रॉम्प्ट बनाता है, असली वीडियो अभी जनरेट नहीं करता।";
+      result.appendChild(note);
+    }
+  </script>
+</body>
+</html>
