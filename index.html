@@ -1,116 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Mekar</title>
 
-const ALLOWED_ORIGIN = "https://YOUR-GITHUB-USERNAME.github.io";
-
-function json(data, status, origin) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": origin,
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Vary": "Origin"
-    }
-  });
-}
-
-export default {
-  async fetch(request, env) {
-    const origin = request.headers.get("Origin") || "";
-
-    if (origin !== ALLOWED_ORIGIN) {
-      return new Response("Origin not allowed", { status: 403 });
+  <style>
+    * {
+      box-sizing: border-box;
     }
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Vary": "Origin"
-        }
-      });
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
     }
 
-    const url = new URL(request.url);
-
-    if (!env.REPLICATE_API_TOKEN) {
-      return json({ error: "Server API secret सेट नहीं है।" }, 500, ALLOWED_ORIGIN);
+    .container {
+      width: 100%;
+      max-width: 700px;
+      margin: auto;
+      padding: 25px 18px;
     }
 
-    const headers = {
-      "Authorization": `Bearer ${env.REPLICATE_API_TOKEN}`,
-      "Content-Type": "application/json"
-    };
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      resize: vertical;
+      border: none;
+      outline: none;
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 16px;
+      background: #0f172a;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 15px;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 12px;
+      background: #0f172a;
+      display: none;
+      line-height: 1.5;
+    }
+
+    video {
+      width: 100%;
+      margin-top: 20px;
+      border-radius: 14px;
+      display: none;
+      background: black;
+    }
+
+    .error {
+      color: #fca5a5;
+    }
+
+    .success {
+      color: #86efac;
+    }
+
+    .small {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>🎬 AI Video Mekar</h1>
+
+  <div class="subtitle">
+    Create AI videos from your story
+  </div>
+
+  <div class="card">
+
+    <label for="story">Write your story</label>
+
+    <textarea
+      id="story"
+      placeholder="Example: A little boy goes into a beautiful forest and meets a friendly monkey..."
+    ></textarea>
+
+    <button id="generateBtn">
+      🎬 Generate Video
+    </button>
+
+    <div id="status" class="status"></div>
+
+    <video id="video" controls playsinline></video>
+
+    <div class="small">
+      AI Video generation may take some time.
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+  // YOUR CLOUDFLARE WORKER
+  const WORKER_URL =
+    "https://green-breeze-76bd.akramfaana143.workers.dev";
+
+  const generateBtn = document.getElementById("generateBtn");
+  const storyInput = document.getElementById("story");
+  const statusBox = document.getElementById("status");
+  const video = document.getElementById("video");
+
+
+  function showStatus(message, type = "") {
+    statusBox.style.display = "block";
+    statusBox.className = "status " + type;
+    statusBox.innerHTML = message;
+  }
+
+
+  generateBtn.addEventListener("click", async () => {
+
+    const story = storyInput.value.trim();
+
+    if (!story) {
+      showStatus("Please write your story first.", "error");
+      return;
+    }
+
+    generateBtn.disabled = true;
+    video.style.display = "none";
+    video.removeAttribute("src");
+
+    showStatus(
+      "⏳ Sending your story to the AI video generator..."
+    );
 
     try {
-      if (url.pathname === "/generate" && request.method === "POST") {
-        const body = await request.json();
-        const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
 
-        if (!prompt || prompt.length > 2000) {
-          return json({ error: "कहानी/प्रॉम्प्ट लिखें (अधिकतम 2000 अक्षर)।" }, 400, ALLOWED_ORIGIN);
+      const response = await fetch(
+        WORKER_URL + "/generate",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            prompt: story
+          })
         }
+      );
 
-        const apiResponse = await fetch(
-          "https://api.replicate.com/v1/models/minimax/video-01/predictions",
-          {
-            method: "POST",
-            headers: {
-              ...headers,
-              "Prefer": "wait=5"
-            },
-            body: JSON.stringify({ input: { prompt } })
-          }
+
+      const data = await response.json();
+
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Video generation request failed."
         );
-
-        const prediction = await apiResponse.json();
-
-        if (!apiResponse.ok) {
-          return json({
-            error: prediction.detail || prediction.title || "Replicate अनुरोध असफल हुआ।"
-          }, apiResponse.status, ALLOWED_ORIGIN);
-        }
-
-        return json({
-          id: prediction.id,
-          status: prediction.status
-        }, 200, ALLOWED_ORIGIN);
       }
 
-      if (url.pathname === "/status" && request.method === "GET") {
-        const id = url.searchParams.get("id") || "";
 
-        if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
-          return json({ error: "Prediction ID सही नहीं है।" }, 400, ALLOWED_ORIGIN);
-        }
+      const predictionId =
+        data.id ||
+        data.prediction?.id;
 
-        const apiResponse = await fetch(
-          `https://api.replicate.com/v1/predictions/${encodeURIComponent(id)}`,
-          { headers: { "Authorization": `Bearer ${env.REPLICATE_API_TOKEN}` } }
+
+      if (!predictionId) {
+        throw new Error(
+          "Prediction ID was not returned by the server."
         );
-
-        const prediction = await apiResponse.json();
-
-        if (!apiResponse.ok) {
-          return json({
-            error: prediction.detail || "वीडियो की स्थिति नहीं मिल सकी।"
-          }, apiResponse.status, ALLOWED_ORIGIN);
-        }
-
-        return json({
-          status: prediction.status,
-          output: prediction.output || null,
-          error: prediction.error || null
-        }, 200, ALLOWED_ORIGIN);
       }
 
-      return json({ error: "यह API रास्ता उपलब्ध नहीं है।" }, 404, ALLOWED_ORIGIN);
+
+      showStatus(
+        "🎬 Video generation started...<br><br>" +
+        "Please wait. This can take a few minutes."
+      );
+
+
+      await checkStatus(predictionId);
+
+
     } catch (error) {
-      return json({ error: "सर्वर में समस्या हुई। कृपया फिर कोशिश करें।" }, 500, ALLOWED_ORIGIN);
-    }
-  }
-};
 
+      console.error(error);
+
+      showStatus(
+        "❌ Error: " + error.message,
+        "error"
+      );
+
+      generateBtn.disabled = false;
+    }
+
+  });
+
+
+  async function checkStatus(id) {
+
+    let attempts = 0;
+    const maxAttempts = 120;
+
+
+    while (attempts < maxAttempts) {
+
+      attempts++;
+
+
+      await new Promise(
+        resolve => setTimeout(resolve, 5000)
+      );
+
+
+      try {
+
+        const response = await fetch(
+          WORKER_URL +
+          "/status?id=" +
+          encodeURIComponent(id)
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Status request failed."
+          );
+        }
+
+
+        const status =
+          data.status ||
+          data.prediction?.status;
+
+
+        if (
+          status === "starting" ||
+          status === "processing"
+        ) {
+
+          showStatus(
+            "⏳ AI is creating your video...<br><br>" +
+            "Status: " + status +
+            "<br><br>" +
+            "Please keep this page open."
+          );
+
+          continue;
+        }
+
+
+        if (status === "succeeded") {
+
+          const output =
+            data.output ||
+            data.prediction?.output;
+
+
+          let videoUrl = null;
+
+
+          if (typeof output === "string") {
+            videoUrl = output;
+          }
+
+          else if (Array.isArray(output)) {
+            videoUrl = output[0];
+          }
+
+
+          if (!videoUrl) {
+            throw new Error(
+              "Video was generated but no video URL was returned."
+            );
+          }
+
+
+          video.src = videoUrl;
+          video.style.display = "block";
+
+          showStatus(
+            "✅ Your video is ready!",
+            "success"
+          );
+
+          generateBtn.disabled = false;
+
+          return;
+        }
+
+
+        if (status === "failed") {
+
+          throw new Error(
+            data.error ||
+            data.prediction?.error ||
+            "Video generation failed."
+          );
+        }
+
+
+        if (status === "canceled") {
+
+          throw new Error(
+            "Video generation was canceled."
+          );
+        }
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        showStatus(
+          "❌ " + error.message,
+          "error"
+        );
+
+        generateBtn.disabled = false;
+
+        return;
+      }
+
+    }
+
+
+    showStatus(
+      "⏰ Video generation is taking longer than expected. Please try again later.",
+      "error"
+    );
+
+    generateBtn.disabled = false;
+
+  }
+
+</script>
+
+</body>
+</html>
