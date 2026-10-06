@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Video Mekar- AI Video Generator</title>
+
+  <title>AI Video Mekar - AI Video Generator</title>
 
   <style>
     * {
@@ -80,6 +81,20 @@
       cursor: not-allowed;
     }
 
+    .download-btn {
+      display: none;
+      width: 100%;
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 12px;
+      background: #16a34a;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font-size: 17px;
+      font-weight: bold;
+    }
+
     .status {
       margin-top: 20px;
       padding: 15px;
@@ -121,7 +136,7 @@
   <h1>🎬 AI Video Mekar</h1>
 
   <div class="subtitle">
-    Create AI videos from your story
+    Create AI videos with synchronized audio
   </div>
 
   <div class="card">
@@ -130,7 +145,7 @@
 
     <textarea
       id="story"
-      placeholder="Example: A little boy goes into a beautiful forest and meets a friendly monkey..."
+      placeholder="Example: A little boy walks through a beautiful forest. Birds are singing and a friendly monkey comes to meet him..."
     ></textarea>
 
     <button id="generateBtn">
@@ -139,10 +154,26 @@
 
     <div id="status" class="status"></div>
 
-    <video id="video" controls playsinline></video>
+    <video
+      id="video"
+      controls
+      playsinline
+    ></video>
+
+    <a
+      id="downloadBtn"
+      class="download-btn"
+      href="#"
+      target="_blank"
+      rel="noopener"
+    >
+      ⬇️ Download Video
+    </a>
 
     <div class="small">
-      AI Video generation may take some time.
+      🎙️ AI synchronized audio is enabled.
+      <br>
+      Video generation may take a few minutes.
     </div>
 
   </div>
@@ -155,35 +186,70 @@
   const WORKER_URL =
     "https://green-breeze-76bd.akramfaana143.workers.dev";
 
-  const generateBtn = document.getElementById("generateBtn");
-  const storyInput = document.getElementById("story");
-  const statusBox = document.getElementById("status");
-  const video = document.getElementById("video");
+
+  const generateBtn =
+    document.getElementById("generateBtn");
+
+  const storyInput =
+    document.getElementById("story");
+
+  const statusBox =
+    document.getElementById("status");
+
+  const video =
+    document.getElementById("video");
+
+  const downloadBtn =
+    document.getElementById("downloadBtn");
 
 
   function showStatus(message, type = "") {
+
     statusBox.style.display = "block";
-    statusBox.className = "status " + type;
+
+    statusBox.className =
+      "status " + type;
+
     statusBox.innerHTML = message;
   }
 
 
   generateBtn.addEventListener("click", async () => {
 
-    const story = storyInput.value.trim();
+    const story =
+      storyInput.value.trim();
+
 
     if (!story) {
-      showStatus("Please write your story first.", "error");
+
+      showStatus(
+        "Please write your story first.",
+        "error"
+      );
+
       return;
     }
 
+
     generateBtn.disabled = true;
+
+
     video.style.display = "none";
+
     video.removeAttribute("src");
+
+    video.load();
+
+
+    downloadBtn.style.display = "none";
+
+    downloadBtn.removeAttribute("href");
+
 
     showStatus(
       "⏳ Sending your story to the AI video generator..."
     );
+
 
     try {
 
@@ -203,12 +269,15 @@
       );
 
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
 
       if (!response.ok) {
+
         throw new Error(
-          data.error || "Video generation request failed."
+          data.error ||
+          "Video generation request failed."
         );
       }
 
@@ -219,6 +288,7 @@
 
 
       if (!predictionId) {
+
         throw new Error(
           "Prediction ID was not returned by the server."
         );
@@ -227,6 +297,7 @@
 
       showStatus(
         "🎬 Video generation started...<br><br>" +
+        "🔊 Audio is enabled.<br><br>" +
         "Please wait. This can take a few minutes."
       );
 
@@ -239,7 +310,8 @@
       console.error(error);
 
       showStatus(
-        "❌ Error: " + error.message,
+        "❌ Error: " +
+        error.message,
         "error"
       );
 
@@ -252,7 +324,8 @@
   async function checkStatus(id) {
 
     let attempts = 0;
-    const maxAttempts = 120;
+
+    const maxAttempts = 180;
 
 
     while (attempts < maxAttempts) {
@@ -261,25 +334,30 @@
 
 
       await new Promise(
-        resolve => setTimeout(resolve, 5000)
+        resolve =>
+          setTimeout(resolve, 5000)
       );
 
 
       try {
 
-        const response = await fetch(
-          WORKER_URL +
-          "/status?id=" +
-          encodeURIComponent(id)
-        );
+        const response =
+          await fetch(
+            WORKER_URL +
+            "/status?id=" +
+            encodeURIComponent(id)
+          );
 
 
-        const data = await response.json();
+        const data =
+          await response.json();
 
 
         if (!response.ok) {
+
           throw new Error(
-            data.error || "Status request failed."
+            data.error ||
+            "Status request failed."
           );
         }
 
@@ -296,8 +374,10 @@
 
           showStatus(
             "⏳ AI is creating your video...<br><br>" +
-            "Status: " + status +
+            "Status: " +
+            status +
             "<br><br>" +
+            "🔊 Audio is enabled.<br><br>" +
             "Please keep this page open."
           );
 
@@ -315,31 +395,54 @@
           let videoUrl = null;
 
 
-          if (typeof output === "string") {
-            videoUrl = output;
-          }
+          if (
+            typeof output === "string"
+          ) {
 
-          else if (Array.isArray(output)) {
+            videoUrl = output;
+
+          } else if (
+            Array.isArray(output)
+          ) {
+
             videoUrl = output[0];
+
           }
 
 
           if (!videoUrl) {
+
             throw new Error(
               "Video was generated but no video URL was returned."
             );
           }
 
 
+          // SHOW VIDEO
           video.src = videoUrl;
+
           video.style.display = "block";
 
+          video.load();
+
+
+          // SHOW DOWNLOAD BUTTON
+          downloadBtn.href = videoUrl;
+
+          downloadBtn.style.display =
+            "block";
+
+
           showStatus(
-            "✅ Your video is ready!",
+            "✅ Your video is ready!<br><br>" +
+            "🔊 Audio included.<br><br>" +
+            "⬇️ Tap Download Video to save it.",
             "success"
           );
 
+
           generateBtn.disabled = false;
+
 
           return;
         }
@@ -362,13 +465,13 @@
           );
         }
 
-
       } catch (error) {
 
         console.error(error);
 
         showStatus(
-          "❌ " + error.message,
+          "❌ " +
+          error.message,
           "error"
         );
 
@@ -384,6 +487,7 @@
       "⏰ Video generation is taking longer than expected. Please try again later.",
       "error"
     );
+
 
     generateBtn.disabled = false;
 
